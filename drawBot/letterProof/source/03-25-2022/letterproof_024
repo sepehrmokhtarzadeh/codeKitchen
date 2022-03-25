@@ -1,0 +1,703 @@
+#
+# -*- coding: UTF-8 -*- # ----------------------------------------------------------------------------- #
+#
+#     T@C Letterproof
+#     Version: 0.024
+#
+#     
+#
+#     93/25/2022
+#
+
+# --------------------------------------
+# -*- Imports -*- # 
+
+import time
+import os
+import string
+import numpy
+from datetime import date
+from os import listdir
+from os.path import join, isfile
+from pathlib import Path
+from operator import itemgetter, attrgetter, methodcaller
+from string import ascii_lowercase, ascii_uppercase, digits, punctuation
+from drawBot import fill, stroke, rect, font, text, openTypeFeatures, height, newPage, textBox
+from drawBot import installFont, pages, pageCount, saveImage
+from fontTools.ttLib.ttFont import TTFont
+from itertools import islice
+
+# --------------------------------------
+# -*- Font Info -*- # 
+
+f = CurrentFont()
+f.testInstall()
+
+font_name = '%s-%s' % (f.info.familyName, f.info.styleName)
+
+# # Use this if you have .calt OpenType feature to replace 'v.x' with version number
+# openTypeFeatures(calt=True)
+# font_version = v period x
+
+# Manual setting of font version
+# Use this if you don't have OpenType feature to replace version number 
+font_version = "v.019"
+
+# --------------------------------------
+# -*- Date & Time -*- # 
+
+today = date.today()
+now = time.localtime()
+current_date = today.strftime ("%d/%m/%y")
+current_year = today.strftime("%Y")
+current_time = time.strftime("%H:%M", now)
+
+# --------------------------------------
+# -*- Settings -*- # 
+
+# Set your information
+designer_name = "Sepehr Mokhtarzadeh"
+typeface_name = "Leitmotiv"
+
+# Set caption font
+caption_font = "Times"
+caption_size = 7
+caption_color = 0
+
+# --------------------------------------
+# -*- Type Sizes -*- # 
+
+# Set type scale
+font_size_XXL = 96
+font_size_XL = 80
+font_size_L = 50
+font_size_M = 24
+font_size_S = 16
+font_size_XS = 12
+font_size_XXS = 9
+
+# Set type waterfall sizes
+waterfall_L = (24, 36, 48, 60)
+waterfall_M = (12, 18, 24, 32)
+waterfall_S = (24, 18, 12, 9)
+
+# Waterfall modifier
+modifier = 8
+y_pos_1 = 40
+y_pos_2 = y_pos_1 - 2
+
+# --------------------------------------
+# -*- Text Strings -*- #
+
+'''This script works by using each string in the list below in a loop to create new pages for your proof. If you dont want a certain page in the doc you can select the string from testStrings and remove/comment it out. Each string is spaced out to make this a bit easier.'''
+
+english_language_text = "ON THE ENDS OF GOOD AND EVIL BY THE ROMAN ORATOR, POLITICIAN AND PHILOSOPHER MARCUS TULLIUS CICERO FOR ZANY QUALITY KILOWATT JUX. But I must explain to you how all this mistaken idea of denouncing of a pleasure and praising pain was born and I will give you a complete account of the system, and expound the actual teachings of 2014 the great explorer of the truth, the master-builder of human happiness. No one rejects, ‘dislikes,’ or avoids pleasure itself, because it is pleasure, but because those who do not know how to pursue pleasure and/or rationally encounter consequences that are extremely painful. Nor again—is there anyone 1967 who loves or pursues or desires $5,238 to obtain pain of itself, because it is pain, but occasionally circumstances occur in which toil and (pain can procure) him some great pleasure. Quality means to take a trivial example, “which” of us ever undertakes laborious physical exercise, except to obtain some advantage from it! But who H&M has any right to find fault with a man 9–5 who chooses to enjoy a pleasure that has no annoying consequences, or one who avoids a pain that produces no resultant pleasure? Wilwright Electrical Co."
+
+textStrings = [ 
+    
+    # Lowercase alphabet
+    [ "one_column", font_size_XXL, "Lowercase alphabet", ''.join(["@", string.ascii_lowercase, ";:., „“‘l’”H?![]{}()/|\p" ])],
+    
+    # Uppercase alphabet
+    [ "one_column", font_size_XXL,  "Uppercase alphabet", ''.join([string.ascii_uppercase, "H&H" ])],
+    
+    # Obliques
+    [ "one_column", waterfall_L, "Relative weight of obliques", "ikiviwixiyiziIKIVIWIXIYIZI" ],
+    
+    # Figures, currency
+    [ "one_column", font_size_XL,   "Figures, currency symbols and math characters", ''.join([string.digits, "0§¶$¢ƒ£¥€8°'*\nn-–—o\n", "0−+±×÷=≈#%8" ])],
+    
+    # Basic character set
+    [ "one_column", font_size_L, "Basic character set overview",  ''.join(["@", string.ascii_lowercase,";:,.\n „“‘l’”", "H?![]{}()/|\ ·-–—[Hq]\n", string.ascii_uppercase, "H&H\n", "©1234567890§¶$¢ƒ£¥€8°'" ])],
+    
+    # Diacritics & Central European
+    [ "one_column", font_size_L, "Diacritics and Central European glyphs", "˝`´ˆˇ˘˜˚˙¨¯¸˛\næœąęįųçđðħĸłŋøßŧıȷ\næœāåďťŀľģķòóőôǒŏöõōñ\nÆŒÅĄĘĮŲÇĐÐĦŦŁŊØSS\nÆŒĎŤĿĽĢÒÓŐÔǑŎÖÕŌÑ" ],
+    
+    # UC and LC control characters
+    [ "two_column", waterfall_M, "UC and LC control characters", "opnvoonononn" ],
+    
+    # UC spacing proof
+    [ "one_column", waterfall_M, "UC spacing proof—every glyph between control characters", "HAHBHCHDHEHFHGHHHIHJHKHLHMHNHOHHHPHQHRHSHTHUHVHWHXHYHZHOAOBOCODOEOFOGOHOIOJOKOLOMONOOOOOPOQOROSOTOUOVOWOXOYOZO" ],
+    
+    # LC spacing proof
+    [ "one_column", waterfall_M, "LC spacing proof – every glyph between control characters", "nanbncndnenfngnhninjnknlnmnnnonnnpnqnrnsntnunvnwnxnynznoaobocodoeofogohoiojokolomonooooopoqorosotouovowoxoyozo" ],
+    
+    # Punctuation spacing proof
+    [ "one_column", waterfall_M, "LC spacing proof – every glyph between control characters", "n;n:n,n.n„n“n‘n’n”n?n!n[n]n{n}n(n)n/n|n\n-n–n—no;o:o,o.o„o“o‘o’o”o?o!o[o]o{o}o(o)o/o|o\o-o–o—o" ],
+    
+    # UC kerning proof 1/2
+    [ "one_column", font_size_S, "UC kerning proof – every glyph between every glyph",
+    ''.join(['%s%s%s\n' % (c, c.join(list(ascii_uppercase)), c) for c in ascii_uppercase if c == "A" or c == "B" or c == "C" or c == "D" or c == "E" or c == "F" or c == "G" or c == "H" or c == "I" or c == "J" or c == "K" or c == "L" or c == "M" or c == "N" or c == "O" ])],
+    
+    # UC kerning proof 2/2
+    [ "one_column", font_size_S, "UC kerning proof – every glyph between every glyph",
+    ''.join(['%s%s%s\n' % (c, c.join(list(ascii_uppercase)), c) for c in ascii_uppercase if c == "P" or c == "Q" or c == "R" or c == "S" or c == "T" or c == "U" or c == "V" or c == "W" or c == "X" or c == "Y" or c == "Z" ])],
+    
+    # LC kerning proof 1/2
+    [ "one_column", font_size_S, "LC kerning proof – every glyph between every glyph",
+    ''.join(['%s%s%s\n' % (c, c.join(list(ascii_lowercase)), c) for c in ascii_lowercase if c == "a" or c == "b" or c == "c" or c == "d" or c == "e" or c == "f" or c == "g" or c == "h" or c == "i" or c == "j" or c == "k" or c == "l" or c == "m" or c == "n" or c == "o" ])],
+    
+    # LC kerning proof 2/2
+    [ "one_column", font_size_S, "LC kerning proof – every glyph between every glyph",
+    ''.join(['%s%s%s\n' % (c, c.join(list(ascii_lowercase)), c) for c in ascii_lowercase if c == "p" or c == "q" or c == "r" or c == "s" or c == "t" or c == "u" or c == "v" or c == "w" or c == "x" or c == "y" or c == "z" ])],
+
+    # UC LC words 1/2
+    [ "one_column", font_size_S, "UC-LC words", "Aardvark Ablution Acrimonious Adventures Aeolian Africa Agamemnon Ahoy Aileron Ajax Akimbo Altruism America Anecdote Aorta Aptitude Aquarium Arcade Aspartame Attrition Aurelius Avuncular Awning Axminster Ayers Azure Banishment Benighted Bhagavad Biblical Bjorn Blancmange Bolton Brusque Burnish Bwana Byzantium Cabbala Cetacean Charlemagne Cicero Clamorous Cnidarian Conifer Crustacean Ctenoid Culled Cynosure Czarina Dalmatian Delphi Dhurrie Dinner Djinn Document Drill Dunleary Dvorak Dwindle Dynamo Eames Ebullient Echo Edify Eels Eftsoons Egress Ehrlich Eindhoven Eject Ekistics Elzevir Eminence Ennoble Eocene Ephemeral Equator Erstwhile Estienne Etiquette Eucalyptus Everyman Ewen Exeter Eyelet Ezekiel Fanfare Ferocious Ffestiniog Finicky Fjord Flanders Forestry Frills Furniture Fylfot Garrulous Generous Ghastly Gimlet Glorious Gnomon Golfer Grizzled Gumption Gwendolyn Gymkhana Harrow Heifer Hindemith Horace Hsi Hubris Hybrid Iambic Ibarra Ichthyology Identity Ievgeny Ifrit Ignite Ihre Ikon Iliad Imminent Innovation Iolanthe Ipanema Irascible Island Italic Ivory Iwis Ixtapa Iyar Izzard Janacek Jenson Jitter Joinery Jr. Jungian Kaiser Kenilworth Khaki Kindred Klondike Knowledge Kohlrabi Kraken Kudzu Kvetch Kwacha Kyrie Labrador Lent Lhasa Liniment Llama Longboat Luddite Lyceum Mandarin"],
+    
+    # UC LC words 2/2
+    [ "one_column", font_size_S, "UC-LC words continued", "Mbandaka Mcintyre Mdina Mfg. Mg Millinery Mlle. Mme. Mnemonic Mr. Ms. Mtn. Myra Narragansett Nefarious Nguyen Nile Nkoso Nnenna Nonsense Nr. Nunnery Nyack Oarsman Oblate Ocular Odessa Oedipus Often Ogre Ohms Oilers Okra Olfactory Ominous Onerous Oogamous Opine Ornate Ossified Othello Oubliette Ovens Owlish Oxen Oyster Ozymandias Parisian Pb Pd. Penrose Pfennig Pg. Pharmacy Pirouette Pleistocene Pneumatic Porridge Pp. Principle Psaltery Ptarmigan Pundit Pyrrhic Qaid Qed Qibris Qom Quill Ransom Rb. Rd.  Ringlet Rm. Ronsard Rp. Rte. Runcible Rwanda Rye Salacious Sbeitla Scherzo Serpentine Sforza Shackles Sinful Sjoerd Skull Slalom  Snipe Sorbonne Spartan Squire Sri Svelte Swarthy Sykes Szentendre Tarragon Tblisi Tcherny Tincture Tlaloc Toreador Tsunami Turkey Twine Tyrolean Tzara Ubiquitous Ucello Udder Ufology Ugric Uhlan Uitlander Ukulele Unguent Uomo Uplift Ursine Usurious Utrecht Uvula Uxorious Uzbek Vanished Vd. Venomous Vindicate Voracious Vrillier Vs. Vt. Vulnerable Vying Washington Wendell Wharf Window Wm. Worth Wrung Wt. Wunderman Wyes Xanthan Xenon Xiao Xmas Xray Xuxa Xylem Yarrow Ybarra Ycair Yds. Yellowstone Yggdrasil Yin Ylang Yours Ypsilanti Yquem Yrs. Ys. Ytterbium Yunnan Yvonne Zanzibar Zero Zhora Zinfandel Zone Zuni Zwieback Zygote"],
+    
+    # English language text, Micro
+    [ "three_column", font_size_XXS, "English language text", english_language_text],
+    
+    # English language text, Text 1/2
+    [ "two_column", font_size_XS, "English language text", english_language_text],
+
+    # English language text, Text 2/2
+    [ "two_column", font_size_S, "English language text", english_language_text]
+    
+    ] 
+
+# --------------------------------------
+# -*- Page Info -*- # 
+
+show_document_grid = False
+show_grid = False
+show_labels = False
+
+# Metrics
+mmmm = 2.834627813
+inch = 72
+
+# Margins
+margin = (1/2) * inch
+number_of_columns = 12
+number_of_rows = 48
+
+# Dimensions
+page_dimensions = 'LetterLandscape'
+newPage(page_dimensions)
+
+# Document Grid
+subdivisions = 8
+grid_unit = inch / subdivisions
+
+page_width = width() / inch
+page_height = height() / inch
+
+number_of_x_gridlines = float(grid_unit * page_width)
+number_of_y_gridlines = float(grid_unit * page_height)
+
+# Document Margins
+margin_left_right = width() - (margin * 2)
+margin_top_bottom = height() - (margin * 2)
+
+col_width = margin_left_right / number_of_columns
+row_height = margin_top_bottom / number_of_rows
+
+# Coordinate helpers
+edge_left = 0
+edge_right = margin_left_right
+edge_top = margin_top_bottom
+edge_bottom = 0
+
+# --------------------------------------
+# -*- Functions, Style  -*- # 
+
+def meta_style():
+    fill(caption_color)
+    font(caption_font, caption_size)
+    
+def type_style():
+    # fallbackFont("AdobeBlank")
+    font(font_name)
+
+# --------------------------------------
+# -*- Functions, Components -*- # 
+
+def drawHeaderFooter():
+    with savedState():
+        translate(margin,margin)
+        with savedState():
+            meta_style()
+            
+            translate(0, fontCapHeight() * 2)
+            
+            # Definitions
+            leftHeader = ' '.join([typeface_name, "©", current_year, "copyright by designed by", designer_name])
+            rightHeader = ' '.join(["output made on:", current_date, ", ", current_time])
+            rightFooter = ' '.join([font_name, font_version])
+            
+            # Draw
+            text(leftHeader, (edge_left, edge_top), align="left" )
+            text(rightHeader, (edge_right, edge_top), align="right")
+            
+            # Draw line below Header
+            with savedState():
+                stroke(0)
+                strokeWidth(0.25)
+                line((edge_left, y_cord["47"]), (edge_right, y_cord["47"]))
+            
+            # Draw Footer
+            translate(0, -(fontCapHeight() * 3.25))
+            text(rightFooter, (edge_left, edge_bottom), align="left")
+    
+# --------------------------------------
+# -*- Functions, Page Layouts -*- # 
+
+def drawOneColumnLayout():
+    global y_pos_1
+    global y_pos_2
+    
+    with savedState():
+        
+        # Set type for page title
+        if font_size == waterfall_L or font_size == waterfall_M or font_size == waterfall_S:
+            font(caption_font, 14)
+            text(section, (edge_left, y_cord["45"]))
+        else:
+            font(caption_font, 14)
+            text(' '.join([str(font_size), "pt.", section]),(edge_left, y_cord["45"]))
+        
+        # Set type for proof, single type size
+        if font_size == font_size_XXL:
+            type_style()
+            fontSize(font_size)
+            line_height = font_size * 1.2
+            translate(0, -fontCapHeight())
+            textBox(proof_set, (edge_left, y_cord["0"], margin_left_right, margin_top_bottom), align="center")
+            
+        elif font_size == font_size_XL:
+            type_style()
+            fontSize(font_size)
+            line_height = font_size * 1.2
+            translate(0, -fontCapHeight())
+            textBox(proof_set, (edge_left, y_cord["0"], margin_left_right, margin_top_bottom), align="center")
+            
+        elif font_size == font_size_L:
+            type_style()
+            fontSize(font_size)
+            line_height = font_size * 1.6
+            lineHeight(line_height)
+            translate(0, -fontCapHeight())
+            baselineShift(-(y_cord["1"]/2))
+            textBox(proof_set, (edge_left, y_cord["0"], margin_left_right, margin_top_bottom), align="center")
+            
+        elif font_size == font_size_M:
+            type_style()
+            fontSize(font_size)
+            translate(0, -fontCapHeight())
+            textBox(proof_set, (edge_left, y_cord["0"], margin_left_right, margin_top_bottom), align="center")
+            
+        elif font_size == font_size_S:
+            type_style()
+            fontSize(font_size)
+            lineHeight(32)
+            translate(0, -fontCapHeight()*4)
+            textBox(proof_set, (edge_left, y_cord["0"], margin_left_right, margin_top_bottom), align="left")
+            
+        elif font_size == font_size_XS:
+            type_style()
+            fontSize(font_size)
+            translate(0, -fontCapHeight())
+            textBox(proof_set, (edge_left, y_cord["0"], margin_left_right, margin_top_bottom), align="center")
+            
+        elif font_size == font_size_XXS:
+            type_style()
+            fontSize(font_size)
+            translate(0, -fontCapHeight())
+            textBox(proof_set, (edge_left, y_cord["0"], margin_left_right, margin_top_bottom), align="center")
+        
+        # Set type for proof, waterfalls 
+        if font_size == waterfall_L:
+            type_style()
+            y_pos_1 = 42
+            y_pos_2 = y_pos_1 - 2 
+            
+            for pts in font_size:
+                type_style()
+                fontSize(pts)
+                translate(0, -fontCapHeight())
+                
+                if y_pos_1 < 0:
+                    continue
+                    if y_pos_2 < 0:
+                        continue 
+                             
+                text( proof_set, (x_cord["0"], y_cord[str(y_pos_1)]) )
+                
+                meta_style()
+                text( f"{pts}pt", (x_cord["0"], y_cord[str(y_pos_2)]) )
+                y_pos_1 = y_pos_1 - 6
+                y_pos_2 = y_pos_2 - 6
+                                
+        elif font_size == waterfall_M:
+            type_style()     
+            translate(0, -fontCapHeight())
+                
+            # Waterfall 1
+            fontSize(14)                        
+            textBox( proof_set, (x_cord["0"], y_cord["0"], margin_left_right, margin_top_bottom -fontCapHeight()*6) )
+            
+            # Waterfall 2
+            wtr = FormattedString()
+            wtr.fontSize(18)
+            wtr.font(font_name)
+            # wtr.fallbackFont("AdobeBlank")
+            wtr += proof_set
+            textBox( wtr, (x_cord["0"], y_cord["0"], margin_left_right, margin_top_bottom -fontCapHeight()*12) ) 
+            
+            # Waterfall 3
+            wtr = FormattedString()
+            wtr.fontSize(24)
+            wtr.font(font_name)
+            # wtr.fallbackFont("AdobeBlank")
+            wtr += proof_set
+            textBox( wtr, (x_cord["0"], y_cord["0"], margin_left_right, margin_top_bottom -fontCapHeight()*18) ) 
+
+            # Waterfall 4
+            wtr = FormattedString()
+            wtr.fontSize(36)
+            wtr.font(font_name)
+            # wtr.fallbackFont("AdobeBlank")
+            wtr += proof_set
+            textBox( wtr, (x_cord["0"], y_cord["0"], margin_left_right, margin_top_bottom -fontCapHeight()*28) ) 
+                
+        elif font_size == waterfall_S:
+            type_style()     
+            fontSize(font_size)
+
+            for pts in font_size:
+                fontSize(pts)
+                translate(0, -fontCapHeight())
+                # print(pts)
+                # textWidth, textHeight = textSize(proof_set)
+                text( proof_set, (x_cord["0"], y_cord[str(y_pos_1)]) )
+                meta_style()
+                text( f"{pts}pt", (x_cord["0"], y_cord[str(y_pos_2)]) )
+                y_pos_1 = y_pos_1 - 6
+                y_pos_2 = y_pos_2 - 6
+
+def drawTwoColumnLayout():
+    global y_pos_1
+    global y_pos_2
+    
+    with savedState():
+            
+        # Set type for page title
+        if font_size == waterfall_L or font_size == waterfall_M or font_size == waterfall_S or font_size == font_size_S or font_size == font_size_XS or font_size == font_size_XXS:
+            font(caption_font, 14)
+            text(section, (edge_left, y_cord["45"]))
+        else:
+            font(caption_font, 14)
+            text(' '.join([str(font_size), "pt.", section]),(edge_left, y_cord["45"]))
+        
+        # Set type for proof, single type size
+        if font_size == font_size_XXL:
+            type_style()
+            fontSize(font_size)
+            line_height = font_size * 1.2
+            translate(0, -fontCapHeight())
+            textBox(proof_set, (edge_left, y_cord["0"], margin_left_right, margin_top_bottom), align="center")
+            
+        if font_size == font_size_S:
+            type_style()
+            
+            # Column 1
+            fontSize(14)
+            line_height = 14 * 1.3
+            translate(0, -fontCapHeight())
+            textBox(proof_set, (edge_left, -(y_cord["6"]), (x_cord["6"]-20), margin_top_bottom), align="left")
+            
+            # Column 2
+            fontSize(16)
+            line_height = 16 * 1.3
+            translate(0, -fontCapHeight())
+            baselineShift(3.75)
+            textBox(proof_set, (x_cord["6"], -(y_cord["6"]), x_cord["6"], margin_top_bottom), align="left")
+            
+            # Type specs
+            meta_style()
+            translate(0, y_cord["0"])
+            text("14pt", (edge_left, (y_cord["43"])))
+            text("16pt", (x_cord["6"], (y_cord["43"])))
+        
+        if font_size == font_size_XS:
+            type_style()
+            
+            # Column 1
+            fontSize(10)
+            line_height = 10 * 1.3
+            translate(0, -fontCapHeight())
+            textBox(proof_set, (edge_left, -(y_cord["6"]), x_cord["5"], margin_top_bottom), align="left")
+            
+            # Column 2
+            fontSize(12)
+            line_height = 12 * 1.3
+            translate(0, -fontCapHeight())
+            baselineShift(3.75)
+            textBox(proof_set, (x_cord["6"], -(y_cord["6"]), x_cord["5"], margin_top_bottom), align="left")
+            
+            # Type specs
+            meta_style()
+            translate(0, y_cord["0"])
+            text("10pt", (edge_left, (y_cord["43"])))
+            text("12pt", (x_cord["6"], (y_cord["43"])))
+
+        # Set type for proof, waterfalls
+        if font_size == waterfall_L:
+
+            for pts in font_size:
+                type_style()
+                fontSize(pts)
+                translate(0, -fontCapHeight())
+                textWidth, textHeight = textSize(proof_set)
+                
+                # Ends loop to prevent TypeError
+                if y_pos_1 < 0:
+                    continue
+                    if y_pos_2 < 0:
+                        continue 
+                                    
+                text( proof_set, (x_cord["0"], y_cord[str(y_pos_1)]) )
+                meta_style()
+                text( f"{pts}pt", (x_cord["0"], y_cord[str(y_pos_2)]) )
+                y_pos_1 = y_pos_1 - 6
+                y_pos_2 = y_pos_2 - 6
+                
+        if font_size == waterfall_M:     
+            y_pos_1 = 40
+            y_pos_2 = y_pos_1 - 2 
+
+            for pts in font_size:
+                type_style()
+                fontSize(pts)
+                translate(0, -fontCapHeight())
+                textWidth, textHeight = textSize(proof_set)
+                
+                # Ends loop to prevent TypeError
+                if y_pos_1 < 0:
+                    continue
+                    if y_pos_2 < 0:
+                        continue 
+                
+                # Creates text            
+                text( proof_set, ((x_cord["6"] -margin), y_cord[str(y_pos_1)]), align="right" )
+                text( proof_set.upper(), ((x_cord["7"] -margin), y_cord[str(y_pos_1)]), align="left" )
+                
+                meta_style()
+                text( f"{pts}pt", ((x_cord["6"] -margin), y_cord[str(y_pos_2)]), align="right" )
+                text( f"{pts}pt", ((x_cord["7"] -margin), y_cord[str(y_pos_2)]), align="left" )
+                y_pos_1 = y_pos_1 - 6
+                y_pos_2 = y_pos_2 - 6
+
+def drawThreeColumnLayout():
+    with savedState():
+        
+        # Set type for page title
+        font(caption_font, 14)
+        text(section, (edge_left, y_cord["45"]))
+        
+        # Set type for proof
+        if font_size == font_size_XXS:
+            type_style()
+            
+            # Column 1
+            fontSize(7)
+            line_height = 7 * 1.3
+            translate(0, -fontCapHeight())
+            textBox(proof_set, (edge_left, -(y_cord["6"]), x_cord["3"], margin_top_bottom), align="left")
+            
+            # Column 2
+            fontSize(8)
+            line_height = 8 * 1.3
+            translate(0, -fontCapHeight())
+            baselineShift(3.75)
+            textBox(proof_set, (x_cord["4"], -(y_cord["6"]), x_cord["3"], margin_top_bottom), align="left")
+            
+            # Column 3
+            fontSize(9)
+            line_height = 9 * 1.3
+            translate(0, -fontCapHeight())
+            baselineShift(3.75*2)
+            textBox(proof_set, (x_cord["8"], -(y_cord["6"]), (x_cord["3"]+30), margin_top_bottom), align="left")
+            
+            # Type specs
+            meta_style()
+            translate(0, y_cord["0"])
+            text("7pt", (edge_left, (y_cord["43"])))
+            text("8pt", (x_cord["4"], (y_cord["43"])))
+            text("9pt", (x_cord["8"], (y_cord["43"])))
+
+# Page template       
+def drawNewPage():
+    newPage(page_dimensions)
+    grid()
+    drawHeaderFooter()
+
+    translate(margin,margin)
+    if layout == "one_column":
+        drawOneColumnLayout()
+    elif layout == "two_column":
+        drawTwoColumnLayout()
+    elif layout == "three_column":
+        drawThreeColumnLayout()
+    elif layout == "four_column":
+        drawOneColumnLayout()
+            
+# Defines on/off button for grid and labels
+def grid():
+    if show_grid:
+        drawGrid()     
+    if show_labels:
+        drawGridLabels()
+
+# --------------------------------------
+# -*- Coordinates -*- # 
+
+x_cord_name_list = list()
+x_cord_num_list = list()
+
+y_cord_name_list = list()
+y_cord_num_list = list()
+
+x_cord_dict = dict(zip(x_cord_name_list, x_cord_num_list))
+zip_x_cords = zip(x_cord_name_list, x_cord_num_list)
+
+y_cord_dict = dict(zip(y_cord_name_list, y_cord_num_list))
+zip_y_cords = zip(y_cord_name_list,  y_cord_num_list)
+
+with savedState():
+    for x in range(number_of_columns + 1):
+        
+        col_name = str(x)
+        x_cord = str(x * col_width)
+        
+        x_cord_name_list.append(col_name)
+        x_cord_num_list.append(float(x_cord))
+        
+        for y in range(number_of_rows + 1):
+            
+            row_name = str(y)
+            y_cord = str(y * row_height)
+            
+            y_cord_name_list.append(row_name)
+            y_cord_num_list.append(float(y_cord))
+
+# Create dictionary from zip object
+x_cord = dict(zip_x_cords)
+y_cord = dict(zip_y_cords)
+
+# --------------------------------------
+# -*- Grid -*- # 
+
+# Draws grid
+def drawGrid():
+    with savedState():
+        translate(margin, margin)
+        for x in numpy.arange(number_of_columns):
+            for y in range(number_of_rows):
+                with savedState():
+                    fill(None)
+                    stroke(1, 0, 0, 0.1)
+                    strokeWidth(0.25)
+                    rect(x * col_width, y * row_height, col_width, row_height)
+
+# Draws grid labels        
+def drawGridLabels():
+    with savedState():
+        translate(margin, margin)
+    
+        fill(1, 0, 0, 0.5)
+        font(caption_font, 6)
+    
+        for x in range(number_of_columns + 1):
+            text(str(x), (x_cord[str(x)], margin / -2), align="center")
+        
+        translate(0, (-fontCapHeight() / 2))
+        for y in range(number_of_rows + 1):
+            text(str(y), (margin / -2, y_cord[str(y)]), align="center")
+
+# Draws title page
+def drawTitlePage(section=""):
+    drawHeaderFooter()
+    with savedState():
+        translate(margin, margin)
+        font(font_name, 32)
+        text(designer_name, (x_cord["1"], y_cord["24"]))
+        text(typeface_name, (x_cord["1"], y_cord["20"]))
+
+# --------------------------------------
+# -*- Instructions -*- # 
+
+# Draws pages
+for eachString in textStrings:
+    
+    # Definitions
+    layout = eachString[0]
+    section = eachString[2]
+    proof_set = eachString[3]
+    
+    # Single type size loops
+    if eachString[1] == font_size_XXL:
+        font_size = eachString[1]
+        drawNewPage()
+    elif eachString[1] == font_size_XL:
+        font_size = eachString[1]
+        drawNewPage()
+    elif eachString[1] == font_size_L:
+        font_size = eachString[1]
+        drawNewPage()
+    elif eachString[1] == font_size_M:
+        font_size = eachString[1]
+        drawNewPage()
+    elif eachString[1] == font_size_S:
+        font_size = eachString[1]
+        drawNewPage()
+    elif eachString[1] == font_size_XS:
+        font_size = eachString[1]
+        drawNewPage()
+    elif eachString[1] == font_size_XXS:
+        font_size = eachString[1]
+        drawNewPage()
+    
+    # Waterfall type loops
+    elif eachString[1] == waterfall_L:
+        font_size = eachString[1]
+        drawNewPage()
+    elif eachString[1] == waterfall_M:
+        font_size = eachString[1]
+        drawNewPage()
+    elif eachString[1] == waterfall_S:
+        font_size = eachString[1]
+        drawNewPage()
+
+
+# -!- ALWAYS KEEP AT BOTTOM OF CODE -!-
+# --------------------------------------
+# -*- Page Numbers -*- # 
+
+# Get all pages
+allPages = pages()
+
+page_number = 0
+
+for page in allPages:
+    
+    # With each loop, add 1 to page number
+    page_number += 1
+    
+    # Set first page as current context
+    if page_number == 1:
+        
+        # Style first page
+        with page:
+            grid()
+            drawTitlePage("")
+    else:
+        
+        # Set next page as current context & add page number
+        with page:
+            meta_style()
+            translate(0, -fontCapHeight())
+            text(str(page_number), (edge_right, edge_bottom), align="right")
